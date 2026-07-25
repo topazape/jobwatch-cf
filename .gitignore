@@ -141,3 +141,13 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Wrangler
+.wrangler/
+.dev.vars*
+
+# Go build artifacts
+container_src/jobwatch
+
+# macOS
+.DS_Store
