@@ -24,8 +24,15 @@ func loadJobs(ctx context.Context, db *sql.DB, source string) (map[string]JobRow
 	for rows.Next() {
 		var j JobRow
 		if err := rows.Scan(
-			&j.JobID, &j.Title, &j.Location, &j.Department, &j.URL,
-			&j.TCreate, &j.TUpdate, &j.ContentHash, &j.ClosedAt,
+			&j.JobID,
+			&j.Title,
+			&j.Location,
+			&j.Department,
+			&j.URL,
+			&j.TCreate,
+			&j.TUpdate,
+			&j.ContentHash,
+			&j.ClosedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -33,6 +40,8 @@ func loadJobs(ctx context.Context, db *sql.DB, source string) (map[string]JobRow
 		m[j.JobID] = j
 	}
 
+	// database/sql を使う時の定番イディオム
+	// nil を返すと途中でエラーが発生したことを検知できない
 	return m, rows.Err()
 }
 

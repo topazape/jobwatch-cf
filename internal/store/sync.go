@@ -25,34 +25,35 @@ type Stats struct {
 
 // Sync は Snapshot を D1 へ反映し、runs に実行記録を残す。
 // fetch 失敗・0件のときは jobs に触らず、runs へのエラー記録のみ行う。
-func Sync(ctx context.Context, db *sql.DB, now int64, snap Snapshot) (Stats, error) {
-	errMsg := snap.Error
-	if errMsg == "" && len(snap.Jobs) == 0 {
-		// fetch 成功で 0 件はソース側の異常の可能性が高い。
-		// そのまま差分を取ると全求人を closed 化してしまうので弾く
+func Sync(ctx context.Context, db *sql.DB, now int64, snapshot Snapshot) (Stats, error) {
+	errMsg := snapshot.Error
+
+	// fetch 成功だが Jobs 0 件はソース側の異常の可能性が高い
+	// そのまま差分を取ると全求人を closed 化してしまうため、エラー扱いとする
+	if errMsg == "" && len(snapshot.Jobs) == 0 {
 		errMsg = "empty snapshot"
 	}
 
 	if errMsg != "" {
-		if err := recordRun(ctx, db, snap.Source, now, errMsg, sql.NullInt64{}); err != nil {
-			return Stats{}, fmt.Errorf("record run: %w", err)
+		if err := recordRun(ctx, db, snapshot.Source, now, errMsg, sql.NullInt64{}); err != nil {
+			return Stats{}, errors.Join(errors.New(errMsg), fmt.Errorf("record run: %w", err))
 		}
 
 		return Stats{}, errors.New(errMsg)
 	}
 
-	stats, err := applyDiff(ctx, db, snap.Source, now, snap.Jobs)
+	stats, err := applyDiff(ctx, db, snapshot.Source, now, snapshot.Jobs)
 	if err != nil {
 		// 途中失敗も runs に残す(ベストエフォート)。記録自体の失敗は元のエラーに併記
-		if rerr := recordRun(ctx, db, snap.Source, now, err.Error(), sql.NullInt64{}); rerr != nil {
+		if rerr := recordRun(ctx, db, snapshot.Source, now, err.Error(), sql.NullInt64{}); rerr != nil {
 			err = errors.Join(err, rerr)
 		}
 
 		return stats, err
 	}
 
-	jobsCount := sql.NullInt64{Int64: int64(len(snap.Jobs)), Valid: true}
-	if err := recordRun(ctx, db, snap.Source, now, "", jobsCount); err != nil {
+	jobsCount := sql.NullInt64{Int64: int64(len(snapshot.Jobs)), Valid: true}
+	if err := recordRun(ctx, db, snapshot.Source, now, "", jobsCount); err != nil {
 		return stats, fmt.Errorf("record run: %w", err)
 	}
 
@@ -63,11 +64,11 @@ func Sync(ctx context.Context, db *sql.DB, now int64, snap Snapshot) (Stats, err
 // d1 ドライバはトランザクション非対応のため1文ずつ書く。jobs(状態)を先、
 // job_events(履歴)を後にすることで、途中で落ちても次回実行が hash 一致で収束する。
 func applyDiff(ctx context.Context, db *sql.DB, source string, now int64, fetched []JobRow) (Stats, error) {
-	var st Stats
+	var stats Stats
 
 	existing, err := loadJobs(ctx, db, source)
 	if err != nil {
-		return st, fmt.Errorf("load jobs: %w", err)
+		return stats, fmt.Errorf("load jobs: %w", err)
 	}
 
 	for _, j := range fetched {
@@ -77,34 +78,34 @@ func applyDiff(ctx context.Context, db *sql.DB, source string, now int64, fetche
 		switch {
 		case !ok: // DB に無い → added
 			if err := insertJob(ctx, db, source, now, j); err != nil {
-				return st, fmt.Errorf("insert %s: %w", j.JobID, err)
+				return stats, fmt.Errorf("insert %s: %w", j.JobID, err)
 			}
 
 			if err := insertEvent(ctx, db, source, j.JobID, "added", now, nil); err != nil {
-				return st, fmt.Errorf("event added %s: %w", j.JobID, err)
+				return stats, fmt.Errorf("event added %s: %w", j.JobID, err)
 			}
 
-			st.Added++
+			stats.Added++
 		case old.ClosedAt.Valid: // closed 済みが再出現 → reopened
 			if err := updateJob(ctx, db, source, j); err != nil {
-				return st, fmt.Errorf("update %s: %w", j.JobID, err)
+				return stats, fmt.Errorf("update %s: %w", j.JobID, err)
 			}
 
 			if err := insertEvent(ctx, db, source, j.JobID, "reopened", now, diffDetail(old, j)); err != nil {
-				return st, fmt.Errorf("event reopened %s: %w", j.JobID, err)
+				return stats, fmt.Errorf("event reopened %s: %w", j.JobID, err)
 			}
 
-			st.Reopened++
+			stats.Reopened++
 		case old.ContentHash != j.ContentHash: // 内容が変わった → changed
 			if err := updateJob(ctx, db, source, j); err != nil {
-				return st, fmt.Errorf("update %s: %w", j.JobID, err)
+				return stats, fmt.Errorf("update %s: %w", j.JobID, err)
 			}
 
 			if err := insertEvent(ctx, db, source, j.JobID, "changed", now, diffDetail(old, j)); err != nil {
-				return st, fmt.Errorf("event changed %s: %w", j.JobID, err)
+				return stats, fmt.Errorf("event changed %s: %w", j.JobID, err)
 			}
 
-			st.Changed++
+			stats.Changed++
 		}
 		// どの case にも該当しない = 掲載中かつ変更なし。行にもイベントにも触らない
 	}
@@ -116,17 +117,17 @@ func applyDiff(ctx context.Context, db *sql.DB, source string, now int64, fetche
 		}
 
 		if err := closeJob(ctx, db, source, id, now); err != nil {
-			return st, fmt.Errorf("close %s: %w", id, err)
+			return stats, fmt.Errorf("close %s: %w", id, err)
 		}
 
 		if err := insertEvent(ctx, db, source, id, "closed", now, nil); err != nil {
-			return st, fmt.Errorf("event closed %s: %w", id, err)
+			return stats, fmt.Errorf("event closed %s: %w", id, err)
 		}
 
-		st.Closed++
+		stats.Closed++
 	}
 
-	return st, nil
+	return stats, nil
 }
 
 type fieldChange struct {
