@@ -1,37 +1,35 @@
 {
-	// エディタ(jsonls)の補完・検証用。wrangler 自体は読まない
-	"$schema": "https://unpkg.com/wrangler/config-schema.json",
-	// Cloudflare 上の Worker 識別子。後から変えると「別の Worker」として新規作成される
-	"name": "jobwatch",
-	// エントリポイント。make build が生成する wasm ロード用シム(ロジックなし)
-	"main": "./build/worker.mjs",
-	// ランタイムの挙動をこの日付時点に固定する(lockfile のランタイム版)。
-	// 意図してランタイム仕様を上げたい時だけ変更する
-	"compatibility_date": "2026-07-28",
-	// cron 専用 Worker のため、自動付与される公開 URL(*.workers.dev)を無効化
-	"workers_dev": false,
-	// dev/deploy の前段で Go → wasm をビルドする
-	"build": {
-		"command": "make build"
-	},
-	// env.DB という名前で D1 をコードへ注入。実体の解決は database_id(UUID) で行われる。
-	// ローカル dev ではこの宣言を元に別のローカル SQLite が作られ、本番 DB には触らない。
-	// Go 側からは d1.OpenConnector("DB") で開く
-	"d1_databases": [
-		{
-			"binding": "DB",
-			"database_name": "jobwatch",
+  // エディタ(jsonls)の補完・検証用。wrangler 自体は読まない
+  "$schema": "https://unpkg.com/wrangler/config-schema.json",
+  // Cloudflare 上の Worker 識別子。後から変えると「別の Worker」として新規作成される
+  "name": "jobwatch",
+  // エントリポイント。make build が生成する wasm ロード用シム(ロジックなし)
+  "main": "./build/worker.mjs",
+  // ランタイムの挙動をこの日付時点に固定する(lockfile のランタイム版)。
+  // 意図してランタイム仕様を上げたい時だけ変更する
+  "compatibility_date": "2026-07-28",
+  // cron 専用 Worker のため、自動付与される公開 URL(*.workers.dev)を無効化
+  "workers_dev": false,
+  // dev/deploy の前段で Go → wasm をビルドする
+  "build": {
+    "command": "make build",
+  },
+  // env.DB という名前で D1 をコードへ注入。実体の解決は database_id(UUID) で行われる。
+  // ローカル dev ではこの宣言を元に別のローカル SQLite が作られ、本番 DB には触らない。
+  // Go 側からは d1.OpenConnector("DB") で開く
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "jobwatch",
       "database_id": "9700cdae-2cc2-40eb-b07b-e59d25450654",
-		},
-	],
-	// scheduled ハンドラの起動スケジュール (UTC 基準)
-	"triggers": {
-		"crons": [
-			"0 15 * * *"
-		],
-	},
-	// Workers Logs の有効化。cron Worker の動作確認手段は実質ログだけなので必須級
-	"observability": {
-		"enabled": true
-	},
+    },
+  ],
+  // scheduled ハンドラの起動スケジュール (UTC 基準)
+  "triggers": {
+    "crons": ["0 15 * * *"],
+  },
+  // Workers Logs の有効化。cron Worker の動作確認手段は実質ログだけなので必須級
+  "observability": {
+    "enabled": true,
+  },
 }
