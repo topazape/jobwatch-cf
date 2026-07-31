@@ -21,7 +21,7 @@
 		{
 			"binding": "DB",
 			"database_name": "jobwatch",
-			"database_id": "b6ec0344-90c5-4bc2-b3f6-30210991be2b",
+      "database_id": "9700cdae-2cc2-40eb-b07b-e59d25450654",
 		},
 	],
 	// scheduled ハンドラの起動スケジュール (UTC 基準)
