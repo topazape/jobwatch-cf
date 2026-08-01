@@ -30,6 +30,12 @@
   },
   // Workers Logs の有効化。cron Worker の動作確認手段は実質ログだけなので必須級
   "observability": {
-    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true,
+    },
+    "traces": {
+      "enabled": false,
+    },
   },
 }
