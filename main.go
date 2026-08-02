@@ -6,10 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"jobwatch/internal/fetcher"
+	"jobwatch/internal/notify"
 	"jobwatch/internal/store"
 	"log"
 	"time"
 
+	"github.com/syumai/workers/cloudflare"
 	"github.com/syumai/workers/cloudflare/cron"
 	"github.com/syumai/workers/cloudflare/d1"
 	"github.com/syumai/workers/cloudflare/fetch"
@@ -17,6 +19,29 @@ import (
 )
 
 const fetchTimeout = 10 * time.Minute
+
+func sendNotifications(ctx context.Context, db *sql.DB, now int64) error {
+	topic := cloudflare.Getenv("NTFY_TOPIC")
+	if topic == "" {
+		log.Println("notify: NTFY_TOPIC not set, skipping")
+
+		return nil
+	}
+
+	n := &notify.Ntfy{
+		Topic:  topic,
+		Client: fetch.NewClient().HTTPClient(fetch.RedirectModeFollow),
+	}
+
+	sent, err := notify.SendPending(ctx, db, n, now)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("notify: sent %d events", sent)
+
+	return nil
+}
 
 func task(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(
@@ -31,9 +56,7 @@ func task(ctx context.Context) error {
 	}
 
 	db := sql.OpenDB(connector)
-	defer func() {
-		_ = db.Close()
-	}()
+	defer db.Close() //nolint:errcheck
 
 	// 実行全体の統一タイムスタンプ。first_seen_at / at / ran_at を揃え、
 	// job_events と runs を (source, at = ran_at) で突き合わせられるようにする
@@ -86,6 +109,10 @@ func task(ctx context.Context) error {
 
 		log.Printf("%s: synced: added=%d changed=%d closed=%d reopened=%d",
 			snap.Source, st.Added, st.Changed, st.Closed, st.Reopened)
+	}
+
+	if err := sendNotifications(ctx, db, now); err != nil {
+		errs = append(errs, fmt.Errorf("notify: %w", err))
 	}
 
 	return errors.Join(errs...)

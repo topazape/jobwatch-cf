@@ -15,9 +15,8 @@ func loadJobs(ctx context.Context, db *sql.DB, source string) (map[string]JobRow
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		_ = rows.Close()
-	}()
+
+	defer rows.Close() //nolint:errcheck
 
 	m := make(map[string]JobRow)
 
