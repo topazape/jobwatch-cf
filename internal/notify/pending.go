@@ -44,7 +44,7 @@ func SendPending(ctx context.Context, db *sql.DB, n *Ntfy, now int64) (int, erro
 func format(events []store.PendingEvent) string {
 	var b strings.Builder
 
-	fmt.Fprintf(&b, "Job updates: %d\n", len(events))
+	fmt.Fprintf(&b, "Job updates: %d (%s)\n", len(events), breakdown(events))
 
 	for i, e := range events {
 		if i == sendLimit {
@@ -57,4 +57,21 @@ func format(events []store.PendingEvent) string {
 	}
 
 	return strings.TrimRight(b.String(), "\n")
+}
+
+func breakdown(events []store.PendingEvent) string {
+	counts := map[string]int{}
+	for _, e := range events {
+		counts[e.Event]++
+	}
+
+	var parts []string
+
+	for _, ev := range []string{"added", "changed", "closed", "reopened"} {
+		if n := counts[ev]; n > 0 {
+			parts = append(parts, fmt.Sprintf("%s %d", ev, n))
+		}
+	}
+
+	return strings.Join(parts, ", ")
 }

@@ -22,7 +22,7 @@ func PendingEvents(ctx context.Context, db *sql.DB) ([]PendingEvent, error) {
 		INNER JOIN jobs AS j
 		ON e.job_id = j.job_id AND e.source = j.source
 		WHERE e.notified_at IS NULL
-		  AND e.event IN ('added', 'changed', 'reopened')
+		  AND e.event IN ('added', 'changed', 'closed', 'reopened')
 		  AND j.location LIKE '%Japan%'
 		ORDER BY e.id`)
 	if err != nil {
