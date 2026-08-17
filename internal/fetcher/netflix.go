@@ -16,7 +16,7 @@ const (
 	nflxBaseURL   = "https://explore.jobs.netflix.net/api/apply/v2/jobs"
 	nflxPageSize  = 10 // num の実効上限(2026-07 実測)
 	nflxMaxJobs   = 2000
-	nflxPageSleep = 500 * time.Millisecond
+	nflxPageSleep = 2 * time.Second
 	nflxUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
 )
 
