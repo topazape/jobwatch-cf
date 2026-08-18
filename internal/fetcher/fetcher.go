@@ -46,3 +46,10 @@ func sleepCtx(ctx context.Context, d time.Duration) error {
 		return ctx.Err()
 	}
 }
+
+type httpError struct {
+	StatusCode int
+	msg        string
+}
+
+func (e *httpError) Error() string { return e.msg }
