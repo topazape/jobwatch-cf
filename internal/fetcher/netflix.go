@@ -20,7 +20,7 @@ const (
 	nflxBaseURL      = "https://explore.jobs.netflix.net/api/apply/v2/jobs"
 	nflxPageSize     = 10 // num の実効上限(2026-07 実測)
 	nflxMaxJobs      = 2000
-	nflxPageSleep    = 2 * time.Second
+	nflxPageSleep    = 500 * time.Millisecond
 	nflxErrBodyLimit = 256 // 非 200 時に切り分け用として残す body 先頭バイト数
 	nflxRetryWait    = 10 * time.Second
 	nflxMaxRetries   = 2
