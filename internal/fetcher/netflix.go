@@ -100,8 +100,10 @@ func (n *Netflix) Fetch(ctx context.Context) ([]Job, error) {
 }
 
 func (n *Netflix) fetchPageRetry(ctx context.Context, client *http.Client, start int) ([]Job, int, error) {
-	var page []Job
-	var count int
+	var (
+		page  []Job
+		count int
+	)
 
 	b := retry.WithMaxRetries(nflxMaxRetries, retry.NewExponential(nflxRetryWait))
 
