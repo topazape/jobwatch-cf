@@ -11,9 +11,9 @@ import (
 )
 
 const (
-	emailEndpoint     = "https://api.cloudflare.com/client/v4/accounts/%s/email/sending/send"
-	emailErrBodyLimit = 256 // 失敗時に切り分け用として残す body 先頭バイト数
-	emailSubject      = "jobwatch"
+	emailEndpoint      = "https://api.cloudflare.com/client/v4/accounts/%s/email/sending/send"
+	emailErrBodyLimit  = 256 // 失敗時に切り分け用として残す body 先頭バイト数
+	emailSubjectPrefix = "jobwatch"
 )
 
 type Email struct {
@@ -43,11 +43,11 @@ type emailResponse struct {
 	Success bool `json:"success"`
 }
 
-func (e *Email) Notify(ctx context.Context, text string) error {
+func (e *Email) Notify(ctx context.Context, subject, text string) error {
 	body, err := json.Marshal(emailRequest{
 		To:      e.To,
 		From:    e.From,
-		Subject: emailSubject,
+		Subject: subject,
 		Text:    text,
 	})
 	if err != nil {
@@ -77,17 +77,17 @@ func (e *Email) Notify(ctx context.Context, text string) error {
 
 	var out emailResponse
 	if err := json.Unmarshal(raw, &out); err != nil {
-		return fmt.Errorf("decode response: %w (status=%s body=%q)", err, resp.Status, snippet(raw))
+		return fmt.Errorf("decode response: %w (status=%s body=%q)", err, resp.Status, emailSnippet(raw))
 	}
 
 	if !out.Success {
-		return fmt.Errorf("unexpected response: status=%s body=%q", resp.Status, snippet(raw))
+		return fmt.Errorf("unexpected response: status=%s body=%q", resp.Status, emailSnippet(raw))
 	}
 
 	return nil
 }
 
-func snippet(b []byte) string {
+func emailSnippet(b []byte) string {
 	if len(b) > emailErrBodyLimit {
 		return string(b[:emailErrBodyLimit])
 	}

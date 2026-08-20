@@ -23,7 +23,8 @@ func SendPending(ctx context.Context, db *sql.DB, n *Email, now int64) (int, err
 		return 0, nil
 	}
 
-	if err := n.Notify(ctx, format(events)); err != nil {
+	subject, text := format(events)
+	if err := n.Notify(ctx, subject, text); err != nil {
 		return 0, fmt.Errorf("send: %w", err)
 	}
 
@@ -40,10 +41,8 @@ func SendPending(ctx context.Context, db *sql.DB, n *Email, now int64) (int, err
 }
 
 // format は通知本文を組み立てる。
-func format(events []store.PendingEvent) string {
+func format(events []store.PendingEvent) (subject, text string) {
 	var b strings.Builder
-
-	fmt.Fprintf(&b, "Job updates: %d (%s)\n", len(events), breakdown(events))
 
 	for i, e := range events {
 		if i == sendLimit {
@@ -55,7 +54,15 @@ func format(events []store.PendingEvent) string {
 		fmt.Fprintf(&b, "* [%s/%s] %s - %s\n  %s\n", e.Source, e.Event, e.Title, e.Location, e.URL)
 	}
 
-	return strings.TrimRight(b.String(), "\n")
+	subject = fmt.Sprintf(
+		"[%s] Job updates: %d (%s)",
+		emailSubjectPrefix,
+		len(events),
+		breakdown(events),
+	)
+	text = strings.TrimRight(b.String(), "\n")
+
+	return subject, text
 }
 
 func breakdown(events []store.PendingEvent) string {
