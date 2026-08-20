@@ -26,7 +26,7 @@
   ],
   // scheduled ハンドラの起動スケジュール (UTC 基準)
   "triggers": {
-    "crons": ["0 6 * * *"],
+    "crons": ["0 7 * * *"],
   },
   // Workers Logs の有効化。cron Worker の動作確認手段は実質ログだけなので必須級
   "observability": {
