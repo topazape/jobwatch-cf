@@ -18,19 +18,39 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const fetchTimeout = 10 * time.Minute
+const (
+	emailFrom    = "jobwatch@topazape.dev"
+	fetchTimeout = 10 * time.Minute
+)
 
 func sendNotifications(ctx context.Context, db *sql.DB, now int64) error {
-	topic := cloudflare.Getenv("NTFY_TOPIC")
-	if topic == "" {
-		log.Println("notify: NTFY_TOPIC not set, skipping")
+	token := cloudflare.Getenv("EMAIL_SENDING_TOKEN")
+	if token == "" {
+		log.Println("notify: EMAIL_SENDING_TOKEN not set, skipping")
 
 		return nil
 	}
 
-	n := &notify.Ntfy{
-		Topic:  topic,
-		Client: fetch.NewClient().HTTPClient(fetch.RedirectModeFollow),
+	accountID := cloudflare.Getenv("CF_ACCOUNT_ID")
+	if accountID == "" {
+		log.Println("notify: CF_ACCOUNT_ID not set, skipping")
+
+		return nil
+	}
+
+	emailTo := cloudflare.Getenv("EMAIL_TO")
+	if emailTo == "" {
+		log.Println("notify: EMAIL_TO not set, skipping")
+
+		return nil
+	}
+
+	n := &notify.Email{
+		AccountID: accountID,
+		Token:     token,
+		From:      emailFrom,
+		To:        emailTo,
+		Client:    fetch.NewClient().HTTPClient(fetch.RedirectModeFollow),
 	}
 
 	sent, err := notify.SendPending(ctx, db, n, now)
