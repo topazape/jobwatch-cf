@@ -8,13 +8,12 @@ import (
 	"strings"
 )
 
-// sendLimit は1メッセージに載せる求人数の上限。ntfy は本文が大きすぎると
-// 添付ファイル化されるため、超過分は件数のみ伝える
+// sendLimit は1通に載せる求人数の上限。超過分は件数のみ伝える
 const sendLimit = 20
 
 // SendPending は未通知イベントを1メッセージで送り、成功したら通知済みにする。
 // 送った件数を返す。対象0件なら何も送らない。
-func SendPending(ctx context.Context, db *sql.DB, n *Ntfy, now int64) (int, error) {
+func SendPending(ctx context.Context, db *sql.DB, n *Email, now int64) (int, error) {
 	events, err := store.PendingEvents(ctx, db)
 	if err != nil {
 		return 0, fmt.Errorf("pending events: %w", err)
