@@ -5,7 +5,7 @@ dev:
 .PHONY: build
 build:
 	go run github.com/syumai/workers/cmd/workers-assets-gen -mode=go
-	GOEXPERIMENT=jsonv2 GOOS=js GOARCH=wasm go build -o ./build/app.wasm .
+	GOOS=js GOARCH=wasm go build -o ./build/app.wasm .
 .PHONY: deploy
 deploy:
 	wrangler deploy
