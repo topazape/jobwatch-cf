@@ -28,7 +28,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           # ローカルの wrangler と同じバージョンに固定(挙動差を防ぐ)。ローカルを上げたらここも上げる
-          wranglerVersion: "4.115.0"
+          wranglerVersion: "4.125.0"
           command: |
             d1 migrations apply jobwatch --remote
             deploy
