@@ -51,7 +51,7 @@ func format(events []store.PendingEvent) (subject, text string) {
 			break
 		}
 
-		fmt.Fprintf(&b, "* [%s/%s] %s - %s\n  %s\n", e.Source, e.Event, e.Title, e.Location, e.URL)
+		fmt.Fprintf(&b, "[%s/%s] %s - %s\n  %s\n", e.Source, e.Event, e.Title, e.Location, e.URL)
 	}
 
 	subject = fmt.Sprintf(
